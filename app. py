@@ -1,0 +1,100 @@
+
+import streamlit as st
+from openai import OpenAI
+
+st.set_page_config(
+    page_title="DressCode AI by Sai8ntech",
+    page_icon="👔"
+)
+
+st.title("DressCode AI")
+st.caption("By Sai8ntech | Style with what you own")
+
+st.write(
+    "Tell me where you're going, what you want to wear, "
+    "and the clothes you already have."
+)
+
+with st.sidebar:
+    st.subheader("Your personal stylist")
+    st.write("Two outfit combinations")
+    st.write("Colour matching")
+    st.write("Weather-aware advice")
+    st.write("No shopping required")
+
+try:
+    api_key = st.secrets["OPENAI_API_KEY"]
+except Exception:
+    api_key = ""
+
+if not api_key:
+    st.info("The AI connection is being set up. Please add the API key in app Secrets.")
+    st.stop()
+
+client = OpenAI(api_key=api_key)
+
+instructions = """
+You are DressCode AI by Sai8ntech, a helpful fashion stylist.
+
+Help everyday people choose outfits using clothes they already own.
+Never pressure users to buy clothes or assume they have a large budget.
+
+Ask where they are going, what they wish to wear, what they own,
+their available colours, and the weather when needed.
+
+Give two realistic outfit combinations using their available items.
+Explain colour matching, footwear, accessories and why the outfits work.
+If information is missing, ask a short follow-up question.
+
+Consider Nigerian occasions, culture and weather where relevant.
+Never claim to have checked live weather unless a weather service
+actually supplied it. Be friendly, respectful and practical.
+"""
+
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {
+            "role": "assistant",
+            "content": (
+                "Hi! Welcome to DressCode AI. Where are you going, "
+                "and what clothes do you have in your wardrobe?"
+            )
+        }
+    ]
+
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.write(message["content"])
+
+prompt = st.chat_input("Tell me about your outfit...")
+
+if prompt:
+    st.session_state.messages.append(
+        {"role": "user", "content": prompt}
+    )
+
+    with st.chat_message("user"):
+        st.write(prompt)
+
+    with st.chat_message("assistant"):
+        try:
+            with st.spinner("Choosing your best combinations..."):
+                result = client.responses.create(
+                    model="gpt-4.1-mini",
+                    instructions=instructions,
+                    input=st.session_state.messages,
+                    max_output_tokens=700
+                )
+
+                answer = result.output_text
+                st.write(answer)
+
+            st.session_state.messages.append(
+                {"role": "assistant", "content": answer}
+            )
+
+        except Exception:
+            st.error(
+                "The AI could not respond. Check your API key, "
+                "API access and internet connection, then try again."
+            )
